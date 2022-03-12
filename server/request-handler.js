@@ -13,6 +13,7 @@ this file and include it in basic-server.js so that it actually works.
 **************************************************************/
 const http = require('https');
 const { data } = require('./storage');
+const fs = require('fs');
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
 // This code allows this server to talk to websites that
@@ -29,6 +30,11 @@ var defaultCorsHeaders = {
   'access-control-allow-headers': 'content-type, accept, authorization',
   'access-control-max-age': 10 // Seconds.
 };
+
+var html;
+fs.readFile('./chatterbox.html', (err, data) => {
+  html = data;
+});
 
 var requestHandler = function (request, response) {
   // Request and Response come from node's http module.
@@ -76,19 +82,31 @@ var requestHandler = function (request, response) {
   var headers = defaultCorsHeaders;
   var { method, url } = request;
 
+  if (method === 'OPTIONS') {
+    statusCode = 200;
+  }
+
   if (method === 'GET' && url.includes('/classes/messages')) {
     statusCode = 200;
   }
 
   if (method === 'POST' && url.includes('/classes/messages')) {
     statusCode = 201;
-    request.on('data', (message) => {
-      data.push(JSON.parse(message.toString('utf-8')));
+    request.on('error', (err) => {
+      console.error(err);
+    }).on('data', (chunk) => {
+      data.push(JSON.parse(chunk.toString()));
     });
   }
 
   response.writeHead(statusCode, headers);
   headers['Content-Type'] = 'application/json';
+  headers['Content-Type'] = 'text/html';
+
+
+  console.log(data);
+  // response.write(html);
+  // response.end();
   response.end(JSON.stringify(data));
 };
 
